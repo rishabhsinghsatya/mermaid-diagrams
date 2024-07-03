@@ -3,9 +3,10 @@ import mermaid from "mermaid";
 
 mermaid.initialize({ startOnLoad: true });
 
-const SequenceDiagram = () => {
+const MermaidDiagram = () => {
   useEffect(() => {
     mermaid.contentLoaded();
+    generateJson();
   }, []);
 
   const mermaidCode = `
@@ -26,7 +27,74 @@ const SequenceDiagram = () => {
         Shyam -->> Ram: Yes, we should do this again sometime
   `;
 
+  const generateJson = () => {
+    const lines = mermaidCode.trim().split("\n");
+    const actors = new Set();
+    const sections = [];
+    let order = 0;
+
+    lines.forEach((line) => {
+      line = line.trim();
+      if (
+        line.startsWith("Note") ||
+        line === "sequenceDiagram" ||
+        line === "autonumber"
+      ) {
+        return;
+      }
+
+      if (line.startsWith("alt")) {
+        const condition = {
+          type: "condition",
+          order: order++,
+          options: [],
+          childrens: [],
+          message: line.replace("alt ", ""),
+          from: "",
+          id: `condition${order}`,
+        };
+        sections.push(condition);
+        return;
+      }
+
+      const arrowIndex = line.indexOf("->>");
+      const message = line.substring(line.indexOf(":") + 1).trim();
+
+      if (arrowIndex !== -1) {
+        const from = line.substring(0, arrowIndex).trim();
+        const to = line.substring(arrowIndex + 3, line.indexOf(":")).trim();
+        actors.add(from);
+        actors.add(to);
+
+        const step = {
+          order: order++,
+          from,
+          type: "step",
+          message,
+          to,
+          id: `step${order}`,
+        };
+
+        sections.push(step);
+      }
+    });
+
+    const actorList = Array.from(actors).map((actor, index) => ({
+      name: actor,
+      order: index,
+      id: `actor${index}`,
+    }));
+
+    const jsonResult = {
+      actors: actorList,
+      sections,
+      subSections: [], // Assuming there are no subSections in the given example
+    };
+
+    console.log(jsonResult);
+  };
+
   return <div className="mermaid">{mermaidCode}</div>;
 };
 
-export default SequenceDiagram;
+export default MermaidDiagram;
